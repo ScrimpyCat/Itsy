@@ -44,9 +44,9 @@ defmodule Itsy.Float do
 
     defp fraction_to_exponent(v, precision, e \\ nil, index \\ 0)
     defp fraction_to_exponent(v, _, e, _) when e != nil, do: { e, v }
-    defp fraction_to_exponent(0, _, e, _), do: { nil, 0 }
-    defp fraction_to_exponent(v, _, e, 1022), do: { 1022, v }
-    defp fraction_to_exponent(v, precision, e, index) do
+    defp fraction_to_exponent(0, _, _, _), do: { nil, 0 }
+    defp fraction_to_exponent(v, _, _, 1022), do: { 1022, v }
+    defp fraction_to_exponent(v, precision, _, index) do
         v = rem(v, precision) * 2
         fraction_to_exponent(v, precision, if(v >= precision, do: index), index + 1)
     end
