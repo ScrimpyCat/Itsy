@@ -4,11 +4,14 @@ defmodule Itsy.Mixfile do
     def project do
         [
             app: :itsy,
+            description: "A library to simplify low level manipulation of numerical types",
             version: "0.0.1",
             elixir: "~> 1.3",
             build_embedded: Mix.env == :prod,
             start_permanent: Mix.env == :prod,
-            deps: deps
+            deps: deps(),
+            package: package(),
+            dialyzer: [plt_add_deps: :transitive]
         ]
     end
 
@@ -32,6 +35,14 @@ defmodule Itsy.Mixfile do
         [
             { :earmark, "~> 0.1", only: :dev },
             { :ex_doc, "~> 0.7", only: :dev }
+        ]
+    end
+
+    defp package do
+        [
+            maintainers: ["Stefan Johnson"],
+            licenses: ["BSD 2-Clause"],
+            links: %{ "GitHub" => "https://github.com/ScrimpyCat/Itsy" }
         ]
     end
 end

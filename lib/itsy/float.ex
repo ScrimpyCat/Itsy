@@ -1,4 +1,5 @@
 defmodule Itsy.Float do
+    @moduledoc false
     use Bitwise
     alias Itsy.Bit
 
