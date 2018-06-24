@@ -1,186 +1,106 @@
 defmodule Itsy.Binary do
     @type endianness :: :big | :little | :native
     @type sign :: :unsigned | :signed
+    @type position :: :high | :low
+    @type packing_options :: [position: position, into: bitstring, endian: endianness, reverse: boolean]
 
     @doc """
-      Pack a list of integers in reverse order into the high-order bits of a
-      bitstring.
+      Pack a list of integers into a bitstring.
 
-      The most significant bit will be based on the last number in the list.
+      The values can be packed into a pre-existing bitstring by setting the `:into`
+      option to the desired destination.
 
-      The byte order defaults to big endian, this can be overriden by passing
-      in another endian of a kind expected by bitstring parameters.
+      The position in the bitstring the values are packed is determined by the
+      `:position` option. A `:high` position will place them in the high-order
+      bits, while a `:low` position will place them in the low-order bits. By
+      default this is set to `:low`.
 
-        iex> Itsy.Binary.l_pack_reverse([0], 2)
+      The list can be inserted in the same order or optionally in reverse order,
+      when the `:reverse` option is set to true.
+
+      * `[position: :high, reverse: false]` - most significant bit will be based on
+      the first number in the list.
+      * `[position: :high, reverse: true]` - most significant bit will be based on
+      the last number in the list.
+      * `[position: :low, reverse: true]` - least significant bit will be based on
+      the first number in the list.
+      * `[position: :low, reverse: false]` - least significant bit will be based on
+      the last number in the list.
+
+      The byte order defaults to big endian, this can be overriden by setting the
+      `:endian` option to a kind expected by bitstring parameters.
+
+        iex> Itsy.Binary.pack([0], 2)
         <<0 :: 2>>
 
-        iex> Itsy.Binary.l_pack_reverse([0], 3)
+        iex> Itsy.Binary.pack([0], 3)
         <<0 :: 3>>
 
-        iex> Itsy.Binary.l_pack_reverse([], 2)
+        iex> Itsy.Binary.pack([], 2)
         <<>>
 
-        iex> Itsy.Binary.l_pack_reverse([0, 0, 0, 0], 2)
+        iex> Itsy.Binary.pack([0, 0, 0, 0], 2)
         <<0 :: 8>>
 
-        iex> Itsy.Binary.l_pack_reverse([1, 2, 3, 4], 2)
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 2)
+        <<1 :: 2, 2 :: 2, 3 :: 2, 0 :: 2>>
+
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 2, position: :high)
+        <<1 :: 2, 2 :: 2, 3 :: 2, 0 :: 2>>
+
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 2, reverse: true)
         <<0 :: 2, 3 :: 2, 2 :: 2, 1 :: 2>>
 
-        iex> Itsy.Binary.l_pack_reverse([1, 2, 3, 4], 3, <<>>)
-        <<4 :: 3, 3 :: 3, 2 :: 3, 1 :: 3>>
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 2, position: :high, reverse: true)
+        <<0 :: 2, 3 :: 2, 2 :: 2, 1 :: 2>>
 
-        iex> Itsy.Binary.l_pack_reverse([1, 2, 3, 4000], 12)
+        iex> Itsy.Binary.pack([1, 2, 3, 4000], 12, position: :high, reverse: true)
         <<4000 :: 12, 3 :: 12, 2 :: 12, 1 :: 12>>
 
-        iex> Itsy.Binary.l_pack_reverse([1, 2, 3, 4], 3, "foo")
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 3, into: "foo")
+        <<"foo", 1 :: 3, 2 :: 3, 3 :: 3, 4 :: 3>>
+
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 3, into: "foo", reverse: true)
+        <<"foo", 4 :: 3, 3 :: 3, 2 :: 3, 1 :: 3>>
+
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 3, into: "foo", position: :high)
+        <<1 :: 3, 2 :: 3, 3 :: 3, 4 :: 3, "foo">>
+
+        iex> Itsy.Binary.pack([1, 2, 3, 4], 3, into: "foo", position: :high, reverse: true)
         <<4 :: 3, 3 :: 3, 2 :: 3, 1 :: 3, "foo">>
 
-        iex> Itsy.Binary.l_pack_reverse([1], 32, <<>>, :little)
+        iex> Itsy.Binary.pack([1], 32, endian: :little)
         <<1 :: 8, 0 :: 24>>
 
-        iex> Itsy.Binary.l_pack_reverse([1], 32, <<>>)
+        iex> Itsy.Binary.pack([1], 32)
         <<0 :: 24, 1 :: 8>>
     """
-    @spec l_pack_reverse([integer], non_neg_integer, bitstring, endianness) :: bitstring
-    def l_pack_reverse(values, size, bin \\ <<>>, endian \\ :big)
-    def l_pack_reverse(values, size, bin, :big) do
+    @spec pack([integer], non_neg_integer, packing_options) :: bitstring
+    def pack(values, size, opts \\ []) do
+        opts = Keyword.merge([position: :low, into: <<>>, endian: :big, reverse: false], opts)
+
+        values = if(opts[:reverse], do: values, else: Enum.reverse(values))
+        case opts[:position] do
+            :high -> pack(values, size, opts[:into], opts[:endian])
+            :low -> <<opts[:into] :: bitstring, pack(values, size, <<>>, opts[:endian]) :: bitstring>>
+        end
+    end
+
+    defp pack(values, size, bin, :big) do
         Enum.reduce(values, bin, fn value, pack ->
             <<value :: size(size)-big, pack :: bitstring>>
         end)
     end
-    def l_pack_reverse(values, size, bin, :little) do
+    defp pack(values, size, bin, :little) do
         Enum.reduce(values, bin, fn value, pack ->
             <<value :: size(size)-little, pack :: bitstring>>
         end)
     end
-    def l_pack_reverse(values, size, bin, :native) do
+    defp pack(values, size, bin, :native) do
         Enum.reduce(values, bin, fn value, pack ->
             <<value :: size(size)-native, pack :: bitstring>>
         end)
     end
-
-    @doc """
-      Pack a list of integers into the high-order bits of a bitstring.
-
-      The most significant bit will be based on the first number in the list.
-
-      The byte order defaults to big endian, this can be overriden by passing
-      in another endian of a kind expected by bitstring parameters.
-
-        iex> Itsy.Binary.l_pack([0], 2)
-        <<0 :: 2>>
-
-        iex> Itsy.Binary.l_pack([0], 3)
-        <<0 :: 3>>
-
-        iex> Itsy.Binary.l_pack([], 2)
-        <<>>
-
-        iex> Itsy.Binary.l_pack([0, 0, 0, 0], 2)
-        <<0 :: 8>>
-
-        iex> Itsy.Binary.l_pack([1, 2, 3, 4], 2)
-        <<1 :: 2, 2 :: 2, 3 :: 2, 0 :: 2>>
-
-        iex> Itsy.Binary.l_pack([1, 2, 3, 4], 3, <<>>)
-        <<1 :: 3, 2 :: 3, 3 :: 3, 4 :: 3>>
-
-        iex> Itsy.Binary.l_pack([1, 2, 3, 4000], 12)
-        <<1 :: 12, 2 :: 12, 3 :: 12, 4000 :: 12>>
-
-        iex> Itsy.Binary.l_pack([1, 2, 3, 4], 3, "foo")
-        <<1 :: 3, 2 :: 3, 3 :: 3, 4 :: 3, "foo">>
-
-        iex> Itsy.Binary.l_pack([1], 32, <<>>, :little)
-        <<1 :: 8, 0 :: 24>>
-
-        iex> Itsy.Binary.l_pack([1], 32, <<>>)
-        <<0 :: 24, 1 :: 8>>
-    """
-    @spec l_pack([integer], non_neg_integer, bitstring, endianness) :: bitstring
-    def l_pack(values, size, bin \\ <<>>, endian \\ :big), do: l_pack_reverse(Enum.reverse(values), size, bin, endian)
-
-    @doc """
-      Pack a list of integers into the low-order bits of a bitstring.
-
-      The least significant bit will be based on the last number in the list.
-
-      The byte order defaults to big endian, this can be overriden by passing
-      in another endian of a kind expected by bitstring parameters.
-
-        iex> Itsy.Binary.r_pack([0], 2)
-        <<0 :: 2>>
-
-        iex> Itsy.Binary.r_pack([0], 3)
-        <<0 :: 3>>
-
-        iex> Itsy.Binary.r_pack([], 2)
-        <<>>
-
-        iex> Itsy.Binary.r_pack([0, 0, 0, 0], 2)
-        <<0 :: 8>>
-
-        iex> Itsy.Binary.r_pack([1, 2, 3, 4], 2)
-        <<1 :: 2, 2 :: 2, 3 :: 2, 0 :: 2>>
-
-        iex> Itsy.Binary.r_pack([1, 2, 3, 4], 3, <<>>)
-        <<1 :: 3, 2 :: 3, 3 :: 3, 4 :: 3>>
-
-        iex> Itsy.Binary.r_pack([1, 2, 3, 4000], 12)
-        <<1 :: 12, 2 :: 12, 3 :: 12, 4000 :: 12>>
-
-        iex> Itsy.Binary.r_pack([1, 2, 3, 4], 3, "foo")
-        <<"foo", 1 :: 3, 2 :: 3, 3 :: 3, 4 :: 3>>
-
-        iex> Itsy.Binary.r_pack([1], 32, <<>>, :little)
-        <<1 :: 8, 0 :: 24>>
-
-        iex> Itsy.Binary.r_pack([1], 32, <<>>)
-        <<0 :: 24, 1 :: 8>>
-    """
-    @spec r_pack([integer], non_neg_integer, bitstring, endianness) :: bitstring
-    def r_pack(values, size, bin \\ <<>>, endian \\ :big), do: <<bin :: bitstring, l_pack(values, size, <<>>, endian) :: bitstring>>
-
-    @doc """
-      Pack a list of integers into the low-order bits of a bitstring.
-
-      The least significant bit will be based on the first number in the list.
-
-      The byte order defaults to big endian, this can be overriden by passing
-      in another endian of a kind expected by bitstring parameters.
-
-        iex> Itsy.Binary.r_pack_reverse([0], 2)
-        <<0 :: 2>>
-
-        iex> Itsy.Binary.r_pack_reverse([0], 3)
-        <<0 :: 3>>
-
-        iex> Itsy.Binary.r_pack_reverse([], 2)
-        <<>>
-
-        iex> Itsy.Binary.r_pack_reverse([0, 0, 0, 0], 2)
-        <<0 :: 8>>
-
-        iex> Itsy.Binary.r_pack_reverse([1, 2, 3, 4], 2)
-        <<0 :: 2, 3 :: 2, 2 :: 2, 1 :: 2>>
-
-        iex> Itsy.Binary.r_pack_reverse([1, 2, 3, 4], 3, <<>>)
-        <<4 :: 3, 3 :: 3, 2 :: 3, 1 :: 3>>
-
-        iex> Itsy.Binary.r_pack_reverse([1, 2, 3, 4000], 12)
-        <<4000 :: 12, 3 :: 12, 2 :: 12, 1 :: 12>>
-
-        iex> Itsy.Binary.r_pack_reverse([1, 2, 3, 4], 3, "foo")
-        <<"foo", 4 :: 3, 3 :: 3, 2 :: 3, 1 :: 3>>
-
-        iex> Itsy.Binary.r_pack_reverse([1], 32, <<>>, :little)
-        <<1 :: 8, 0 :: 24>>
-
-        iex> Itsy.Binary.r_pack_reverse([1], 32, <<>>)
-        <<0 :: 24, 1 :: 8>>
-    """
-    @spec r_pack_reverse([integer], non_neg_integer, bitstring, endianness) :: bitstring
-    def r_pack_reverse(values, size, bin \\ <<>>, endian \\ :big), do: <<bin :: bitstring, l_pack_reverse(values, size, <<>>, endian) :: bitstring>>
 
     @doc """
       Unpack integers in reverse order from the high-order bits of a bitstring.
