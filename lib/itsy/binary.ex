@@ -2,11 +2,14 @@ defmodule Itsy.Binary do
     @type endianness :: :big | :little | :native
     @type signedness :: :unsigned | :signed
     @type position :: :high | :low
+    @type encodable :: number | bitstring
+    @type decode_type :: :integer | :float | :bitstring
+    @type decoder :: decode_type | ((bitstring, [encodable]) -> decode_type)
     @type packing_options :: [position: position, into: bitstring, endian: endianness, reverse: boolean]
-    @type unpacking_options :: [position: position, count: nil | non_neg_integer, endian: endianness, sign: signedness, reverse: boolean]
+    @type unpacking_options :: [position: position, count: nil | non_neg_integer, endian: endianness, sign: signedness, reverse: boolean, decoder: decoder]
 
     @doc """
-      Pack a list of integers into a bitstring.
+      Pack a list of integers, floats, or bitstrings into a bitstring.
 
       The values can be packed into a pre-existing bitstring by setting the `:into`
       option to the desired destination.
@@ -75,8 +78,20 @@ defmodule Itsy.Binary do
 
         iex> Itsy.Binary.pack([1], 32)
         <<0 :: 24, 1 :: 8>>
+
+        iex> Itsy.Binary.pack([0.5], 32)
+        <<63 :: 8, 0 :: 24>>
+
+        iex> Itsy.Binary.pack(["foo", "bar"], 24)
+        "foobar"
+
+        iex> Itsy.Binary.pack(["foo", "bar"], 8)
+        "fb"
+
+        iex> Itsy.Binary.pack(["foo", "bar"], 32)
+        <<"foo", 0 :: 8, "bar", 0 :: 8>>
     """
-    @spec pack([integer], non_neg_integer, packing_options) :: bitstring
+    @spec pack([encodable], non_neg_integer, packing_options) :: bitstring
     def pack(values, size, opts \\ []) do
         opts = Keyword.merge([position: :low, into: <<>>, endian: :big, reverse: false], opts)
 
@@ -87,24 +102,42 @@ defmodule Itsy.Binary do
         end
     end
 
+    defp pad(left, right, padding, size), do: <<left :: bitstring, padding :: size(size), right :: bitstring>>
+
     defp pack(values, size, bin, :big) do
-        Enum.reduce(values, bin, fn value, pack ->
-            <<value :: size(size)-big, pack :: bitstring>>
+        padding = 0
+        Enum.reduce(values, bin, fn
+            value, pack when is_integer(value) -> <<value :: size(size)-big, pack :: bitstring>>
+            value, pack when is_float(value) -> <<value :: float-size(size)-big, pack :: bitstring>>
+            <<value :: bitstring-size(size), _ :: bitstring>>, pack -> <<value :: bitstring, pack :: bitstring>>
+            value, pack -> pad(value, pack, padding, size - bit_size(value))
         end)
     end
     defp pack(values, size, bin, :little) do
-        Enum.reduce(values, bin, fn value, pack ->
-            <<value :: size(size)-little, pack :: bitstring>>
+        padding = 0
+        Enum.reduce(values, bin, fn
+            value, pack when is_integer(value) -> <<value :: size(size)-little, pack :: bitstring>>
+            value, pack when is_float(value) -> <<value :: float-size(size)-little, pack :: bitstring>>
+            <<value :: bitstring-size(size), _ :: bitstring>>, pack -> <<value :: bitstring, pack :: bitstring>>
+            value, pack -> pad(value, pack, padding, size - bit_size(value))
         end)
     end
     defp pack(values, size, bin, :native) do
-        Enum.reduce(values, bin, fn value, pack ->
-            <<value :: size(size)-native, pack :: bitstring>>
+        padding = 0
+        Enum.reduce(values, bin, fn
+            value, pack when is_integer(value) -> <<value :: size(size)-native, pack :: bitstring>>
+            value, pack when is_float(value) -> <<value :: float-size(size)-native, pack :: bitstring>>
+            <<value :: bitstring-size(size), _ :: bitstring>>, pack -> <<value :: bitstring, pack :: bitstring>>
+            value, pack -> pad(value, pack, padding, size - bit_size(value))
         end)
     end
 
     @doc """
-      Unpack integers from a bitstring.
+      Unpack integers, floats, or bitstrings from a bitstring.
+
+      The type of value to unpack is inferred by the `:decoder`. By default this
+      option is set to `:integer`, but can be set to any of the other types, or
+      a function that will return the type to be used for that value.
 
       A certain number of values can be unpacked by setting the `:count` option.
 
@@ -178,24 +211,36 @@ defmodule Itsy.Binary do
 
         iex> Itsy.Binary.unpack(<<255 :: 8>>, 8, endian: :big, sign: :signed)
         [-1]
+
+        iex> Itsy.Binary.unpack(<<63 :: 8, 0 :: 24>>, 32, decoder: :float)
+        [0.5]
+
+        iex> Itsy.Binary.unpack("foobar", 24, decoder: :bitstring)
+        ["foo", "bar"]
+
+        iex> Itsy.Binary.unpack(<<"test", 1 :: 32>>, 32, decoder: fn
+        ...>     _, [] -> :bitstring
+        ...>     _, _ -> :integer
+        ...> end)
+        ["test", 1]
     """
-    @spec unpack(bitstring, non_neg_integer, unpacking_options) :: [integer]
+    @spec unpack(bitstring, non_neg_integer, unpacking_options) :: [encodable]
     def unpack(packed, size, opts \\ []) do
-        opts = Keyword.merge([position: :low, count: nil, endian: :big, sign: :unsigned, reverse: false], opts)
+        opts = Keyword.merge([position: :low, count: nil, endian: :big, sign: :unsigned, reverse: false, decoder: :integer], opts)
 
         values = case opts[:count] do
             nil ->
                 count = div(bit_size(packed), size)
                 { values, <<>> } = case opts[:position] do
-                    :high -> unpack(packed, size, count, opts[:endian], opts[:sign])
-                    :low -> unpack(chunk(packed, count, size), size, count, opts[:endian], opts[:sign])
+                    :high -> unpack(packed, size, count, opts[:endian], opts[:sign], opts[:decoder])
+                    :low -> unpack(chunk(packed, count, size), size, count, opts[:endian], opts[:sign], opts[:decoder])
                 end
 
                 values
             count ->
                 { values, _ } = case opts[:position] do
-                    :high -> unpack(packed, size, count, opts[:endian], opts[:sign])
-                    :low -> unpack(chunk(packed, count, size), size, count, opts[:endian], opts[:sign])
+                    :high -> unpack(packed, size, count, opts[:endian], opts[:sign], opts[:decoder])
+                    :low -> unpack(chunk(packed, count, size), size, count, opts[:endian], opts[:sign], opts[:decoder])
                 end
 
                 values
@@ -210,30 +255,48 @@ defmodule Itsy.Binary do
         packed
     end
 
-    defp unpack(packed, size, n, endian, sign, values \\ [])
-    defp unpack(bin, _, 0, _, _, values), do: { values, bin }
-    defp unpack(packed, size, n, endian = :big, sign = :unsigned, values) do
+    defp unpack(packed, size, n, endian, sign, decoder, values \\ [], type \\ nil)
+    defp unpack(bin, _, 0, _, _, _, values, _), do: { values, bin }
+    defp unpack(packed, size, n, endian, sign, decoder, values, nil) when is_atom(decoder), do: unpack(packed, size, n, endian, sign, decoder, values, decoder)
+    defp unpack(packed, size, n, endian, sign, decoder, values, nil), do: unpack(packed, size, n, endian, sign, decoder, values, decoder.(packed, values))
+    defp unpack(packed, size, n, endian = :big, sign = :unsigned, decoder, values, :integer) do
         <<value :: size(size)-big-unsigned, packed :: bitstring>> = packed
-        unpack(packed, size, n - 1, endian, sign, [value|values])
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
-    defp unpack(packed, size, n, endian = :big, sign = :signed, values) do
+    defp unpack(packed, size, n, endian = :big, sign = :signed, decoder, values, :integer) do
         <<value :: size(size)-big-signed, packed :: bitstring>> = packed
-        unpack(packed, size, n - 1, endian, sign, [value|values])
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
-    defp unpack(packed, size, n, endian = :little, sign = :unsigned, values) do
+    defp unpack(packed, size, n, endian = :little, sign = :unsigned, decoder, values, :integer) do
         <<value :: size(size)-little-unsigned, packed :: bitstring>> = packed
-        unpack(packed, size, n - 1, endian, sign, [value|values])
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
-    defp unpack(packed, size, n, endian = :little, sign = :signed, values) do
+    defp unpack(packed, size, n, endian = :little, sign = :signed, decoder, values, :integer) do
         <<value :: size(size)-little-signed, packed :: bitstring>> = packed
-        unpack(packed, size, n - 1, endian, sign, [value|values])
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
-    defp unpack(packed, size, n, endian = :native, sign = :unsigned, values) do
+    defp unpack(packed, size, n, endian = :native, sign = :unsigned, decoder, values, :integer) do
         <<value :: size(size)-native-unsigned, packed :: bitstring>> = packed
-        unpack(packed, size, n - 1, endian, sign, [value|values])
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
-    defp unpack(packed, size, n, endian = :native, sign = :signed, values) do
+    defp unpack(packed, size, n, endian = :native, sign = :signed, decoder, values, :integer) do
         <<value :: size(size)-native-signed, packed :: bitstring>> = packed
-        unpack(packed, size, n - 1, endian, sign, [value|values])
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
+    end
+    defp unpack(packed, size, n, endian = :big, sign, decoder, values, :float) do
+        <<value :: float-size(size)-big, packed :: bitstring>> = packed
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
+    end
+    defp unpack(packed, size, n, endian = :little, sign, decoder, values, :float) do
+        <<value :: float-size(size)-little, packed :: bitstring>> = packed
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
+    end
+    defp unpack(packed, size, n, endian = :native, sign, decoder, values, :float) do
+        <<value :: float-size(size)-native, packed :: bitstring>> = packed
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
+    end
+    defp unpack(packed, size, n, endian, sign, decoder, values, :bitstring) do
+        <<value :: bitstring-size(size), packed :: bitstring>> = packed
+        unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
 end
