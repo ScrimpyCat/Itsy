@@ -303,6 +303,12 @@ defmodule Itsy.Binary do
     defmacro encoder(charset) do
         quote bind_quoted: [charset: charset] do
             encoding_size = Itsy.Bit.count(Itsy.Bit.mask_lower_power_of_2(length(charset)))
+            get_size = if Enum.any?(charset, fn { c, _ } -> c > 255 end) do
+                { fun, _, _ } = quote(do: String.length)
+                fun
+            else
+                :byte_size
+            end
 
             def encode(data, opts \\ [], encoding \\ "")
             for { chr, index } <- charset do
@@ -310,7 +316,7 @@ defmodule Itsy.Binary do
             end
             def encode(<<>>, opts, encoding) do
                 multiple = opts[:multiple] || 1
-                case rem(byte_size(encoding), multiple) do
+                case rem(unquote(get_size)(encoding), multiple) do
                     0 -> encoding
                     r ->
                         case opts[:pad_chr] do
