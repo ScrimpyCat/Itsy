@@ -299,4 +299,32 @@ defmodule Itsy.Binary do
         <<value :: bitstring-size(size), packed :: bitstring>> = packed
         unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
+
+    defmacro encoder(charset) do
+        quote bind_quoted: [charset: charset] do
+            encoding_size = Itsy.Bit.count(Itsy.Bit.mask_lower_power_of_2(length(charset)))
+
+            def encode(data, opts \\ [], encoding \\ "")
+            for { chr, index } <- charset do
+                def encode(<<unquote(index) :: size(unquote(encoding_size)), data :: bitstring>>, opts, encoding), do: encode(data, opts, encoding <> unquote(<<chr :: utf8>>))
+            end
+            def encode(<<>>, opts, encoding) do
+                multiple = opts[:multiple] || 1
+                case rem(byte_size(encoding), multiple) do
+                    0 -> encoding
+                    r ->
+                        case opts[:pad_chr] do
+                            nil ->
+                                pad_size = (multiple - r) * 8
+                                <<encoding :: binary, 0 :: size(pad_size)>>
+                            pad_chr -> encoding <> String.pad_trailing("", multiple - r, pad_chr)
+                        end
+                end
+            end
+            def encode(data, opts, encoding) do
+                padding_size = unquote(encoding_size) - bit_size(data)
+                encode(<<data :: bitstring, (opts[:pad_bit] || 0) :: size(padding_size)>>, opts, encoding)
+            end
+        end
+    end
 end
