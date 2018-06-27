@@ -300,8 +300,12 @@ defmodule Itsy.Binary do
         unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
 
-    defmacro encoder(charset) do
-        quote bind_quoted: [charset: charset] do
+    defmacro encoder(charset, opts \\ []) do
+        quote bind_quoted: [
+            charset: charset,
+            encode: opts[:encode] || :encode,
+            decode: opts[:decode] || :decode
+        ] do
             encoding_size = Itsy.Bit.count(Itsy.Bit.mask_lower_power_of_2(length(charset)))
             get_size = if Enum.any?(charset, fn { c, _ } -> byte_size(c) > 1 end) do
                 { fun, _, _ } = quote(do: String.length)
@@ -310,11 +314,11 @@ defmodule Itsy.Binary do
                 :byte_size
             end
 
-            def decode(encoding, opts \\ [], data \\ <<>>)
+            def unquote(decode)(encoding, opts \\ [], data \\ <<>>)
             for { chr, index } <- charset do
-                def decode(<<unquote(chr) :: binary, encoding :: binary>>, opts, data), do: decode(encoding, opts, <<data :: bitstring, unquote(index) :: size(unquote(encoding_size))>>)
+                def unquote(decode)(<<unquote(chr) :: binary, encoding :: binary>>, opts, data), do: unquote(decode)(encoding, opts, <<data :: bitstring, unquote(index) :: size(unquote(encoding_size))>>)
             end
-            def decode("", opts, data) do
+            def unquote(decode)("", opts, data) do
                 if opts[:bits] do
                     { :ok, data }
                 else
@@ -323,8 +327,8 @@ defmodule Itsy.Binary do
                     { :ok, data }
                 end
             end
-            def decode(encoding, [encoding|_], _), do: :error
-            def decode(encoding, opts, data) do
+            def unquote(decode)(encoding, [encoding|_], _), do: :error
+            def unquote(decode)(encoding, opts, data) do
                 String.graphemes(opts[:pad_chr] || "")
                 |> Enum.reduce_while(encoding, fn c, acc ->
                     size = byte_size(c)
@@ -333,14 +337,14 @@ defmodule Itsy.Binary do
                         _ -> { :halt, acc }
                     end
                 end)
-                |> decode([encoding|opts], data)
+                |> unquote(decode)([encoding|opts], data)
             end
 
-            def encode(data, opts \\ [], encoding \\ "")
+            def unquote(encode)(data, opts \\ [], encoding \\ "")
             for { chr, index } <- charset do
-                def encode(<<unquote(index) :: size(unquote(encoding_size)), data :: bitstring>>, opts, encoding), do: encode(data, opts, encoding <> unquote(<<chr :: binary>>))
+                def unquote(encode)(<<unquote(index) :: size(unquote(encoding_size)), data :: bitstring>>, opts, encoding), do: unquote(encode)(data, opts, encoding <> unquote(<<chr :: binary>>))
             end
-            def encode(<<>>, opts, encoding) do
+            def unquote(encode)(<<>>, opts, encoding) do
                 multiple = opts[:multiple] || 1
                 case rem(unquote(get_size)(encoding), multiple) do
                     0 -> encoding
@@ -353,10 +357,14 @@ defmodule Itsy.Binary do
                         end
                 end
             end
-            def encode(data, opts, encoding) do
+            def unquote(encode)(data, opts, encoding) do
                 padding_size = unquote(encoding_size) - bit_size(data)
-                encode(<<data :: bitstring, (opts[:pad_bit] || 0) :: size(padding_size)>>, opts, encoding)
+                unquote(encode)(<<data :: bitstring, (opts[:pad_bit] || 0) :: size(padding_size)>>, opts, encoding)
             end
         end
+        |> Macro.postwalk(fn
+            { :def, context, body } -> { if(opts[:private], do: :defp, else: :def), context, body }
+            node -> node
+        end)
     end
 end
