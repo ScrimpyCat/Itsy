@@ -310,6 +310,28 @@ defmodule Itsy.Binary do
                 :byte_size
             end
 
+            def decode(encoding, opts \\ [], data \\ <<>>)
+            for { chr, index } <- charset do
+                def decode(<<unquote(chr) :: binary, encoding :: binary>>, opts, data), do: decode(encoding, opts, <<data :: bitstring, unquote(index) :: size(unquote(encoding_size))>>)
+            end
+            def decode("", opts, data) do
+                bytes = div(bit_size(data), 8)
+                <<data :: binary-size(bytes), _ :: bitstring>> = data
+                { :ok, data }
+            end
+            def decode(encoding, [encoding|_], _), do: :error
+            def decode(encoding, opts, data) do
+                String.graphemes(opts[:pad_chr] || "")
+                |> Enum.reduce_while(encoding, fn c, acc ->
+                    size = byte_size(c)
+                    case acc do
+                        <<^c :: binary-size(size), acc :: binary>> -> { :cont, acc }
+                        _ -> { :halt, acc }
+                    end
+                end)
+                |> decode([encoding|opts], data)
+            end
+
             def encode(data, opts \\ [], encoding \\ "")
             for { chr, index } <- charset do
                 def encode(<<unquote(index) :: size(unquote(encoding_size)), data :: bitstring>>, opts, encoding), do: encode(data, opts, encoding <> unquote(<<chr :: binary>>))
