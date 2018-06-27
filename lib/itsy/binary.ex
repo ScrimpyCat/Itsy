@@ -315,9 +315,13 @@ defmodule Itsy.Binary do
                 def decode(<<unquote(chr) :: binary, encoding :: binary>>, opts, data), do: decode(encoding, opts, <<data :: bitstring, unquote(index) :: size(unquote(encoding_size))>>)
             end
             def decode("", opts, data) do
-                bytes = div(bit_size(data), 8)
-                <<data :: binary-size(bytes), _ :: bitstring>> = data
-                { :ok, data }
+                if opts[:bits] do
+                    { :ok, data }
+                else
+                    bytes = div(bit_size(data), 8)
+                    <<data :: binary-size(bytes), _ :: bitstring>> = data
+                    { :ok, data }
+                end
             end
             def decode(encoding, [encoding|_], _), do: :error
             def decode(encoding, opts, data) do
