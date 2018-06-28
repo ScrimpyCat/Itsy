@@ -7,6 +7,8 @@ defmodule Itsy.Binary do
     @type decoder :: decode_type | ((bitstring, [encodable]) -> decode_type)
     @type packing_options :: [position: position, into: bitstring, endian: endianness, reverse: boolean]
     @type unpacking_options :: [position: position, count: nil | non_neg_integer, endian: endianness, sign: signedness, reverse: boolean, decoder: decoder]
+    @type encode_options :: [multiple: pos_integer, pad_chr: String.t, pad_bit: integer]
+    @type decode_options :: [bits: boolean, pad_chr: String.t]
 
     @doc """
       Pack a list of integers, floats, or bitstrings into a bitstring.
@@ -314,6 +316,27 @@ defmodule Itsy.Binary do
                 :byte_size
             end
 
+            @doc """
+              Decodes encoded strings produced by the `#{encode}/3` function.
+
+              By default the decoded data will be stripped of any bits that do not
+              fit in the byte boundaries. This behaviour can be changed by setting
+              the `:bits` option to `true`. The resulting `bitstring` my contain
+              some pad bits.
+
+              If the encoded string contains some padding characters these will
+              to be specified so they can be removed. Set the `:pad_chr` option
+              to the padding sequence that was used when encoding this data.
+              Multiple encoded strings with the same padding sequence can be
+              chained together, and will be decoded into a contiguous set of
+              data.
+
+                #{encode}("foo") |> #{decode}()
+                #{encode}("foo", multiple: 4, pad_chr: "=") |> #{decode}(pad_chr: "=")
+                #{encode}("foo") |> #{decode}(bits: true)
+                #{encode}("foo", pad_bit: 2) |> #{decode}()
+            """
+            @spec unquote(decode)(bitstring, Itsy.Binary.decode_options, bitstring) :: { :ok, bitstring } | :error
             def unquote(decode)(encoding, opts \\ [], data \\ <<>>)
             for { chr, index } <- charset do
                 def unquote(decode)(<<unquote(chr) :: binary, encoding :: binary>>, opts, data), do: unquote(decode)(encoding, opts, <<data :: bitstring, unquote(index) :: size(unquote(encoding_size))>>)
@@ -340,6 +363,35 @@ defmodule Itsy.Binary do
                 |> unquote(decode)([encoding|opts], data)
             end
 
+            @doc """
+              Encodes data into a string which can be decoded using the `#{decode}/3`
+              function.
+
+              The encoded data will pad any bits needed to make the entire data
+              fit within byte boundaries. By default this padding will be using
+              `0` bits, however this can be changed by setting the option `:pad_bit`
+              to the specific bit sequence desired (note that only the part of the
+              bit sequence needed to reach a byte boundary will be used).
+
+              Optionally an encoded string can have additional padding put onto
+              the final encoding (e.g. if you wanted to pack encodings together).
+              To enable this behaviour set `:multiple` to the multiples of
+              characters needed in the encoded string. e.g. A value of `1` (the
+              default) will not require any padding, a value of `2` will require
+              padding if there is only an odd number of characters.
+
+              By default the encoded string padding will use `0` bytes, if a
+              specific padding character(s) is desired, this can be done by
+              setting the `:pad_chr` option to the string to use as the padding
+              sequence (note that only the part of the character sequence needed
+              to reach the specified multiple will be used).
+
+                #{encode}("foo") |> #{decode}()
+                #{encode}("foo", multiple: 4, pad_chr: "=") |> #{decode}(pad_chr: "=")
+                #{encode}("foo") |> #{decode}(bits: true)
+                #{encode}("foo", pad_bit: 2) |> #{decode}()
+            """
+            @spec unquote(encode)(bitstring, Itsy.Binary.encode_options, binary) :: binary
             def unquote(encode)(data, opts \\ [], encoding \\ "")
             for { chr, index } <- charset do
                 def unquote(encode)(<<unquote(index) :: size(unquote(encoding_size)), data :: bitstring>>, opts, encoding), do: unquote(encode)(data, opts, encoding <> unquote(<<chr :: binary>>))
