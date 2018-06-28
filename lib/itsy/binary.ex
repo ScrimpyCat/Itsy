@@ -321,7 +321,7 @@ defmodule Itsy.Binary do
 
               By default the decoded data will be stripped of any bits that do not
               fit in the byte boundaries. This behaviour can be changed by setting
-              the `:bits` option to `true`. The resulting `bitstring` my contain
+              the `:bits` option to `true`. The resulting `bitstring` may contain
               some pad bits.
 
               If the encoded string contains some padding characters these will
