@@ -302,13 +302,20 @@ defmodule Itsy.Binary do
         unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
 
+    def encoder_size(count), do: Itsy.Bit.count(Itsy.Bit.mask_lower_power_of_2(count))
+
+    defp padding(count, n) when rem(count * n, 8) == 0, do: n
+    defp padding(count, n), do: padding(count, n + 1)
+
+    def encoder_padding(count), do: padding(encoder_size(count), 1)
+
     defmacro encoder(charset, opts \\ []) do
         quote bind_quoted: [
             charset: charset,
             encode: opts[:encode] || :encode,
             decode: opts[:decode] || :decode
         ] do
-            encoding_size = Itsy.Bit.count(Itsy.Bit.mask_lower_power_of_2(length(charset)))
+            encoding_size = Itsy.Binary.encoder_size(length(charset))
             get_size = if Enum.any?(charset, fn { c, _ } -> byte_size(c) > 1 end) do
                 { fun, _, _ } = quote(do: String.length)
                 fun
