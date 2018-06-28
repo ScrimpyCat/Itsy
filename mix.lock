@@ -1,2 +1,8 @@
-%{"earmark": {:hex, :earmark, "0.2.1", "ba6d26ceb16106d069b289df66751734802777a3cbb6787026dd800ffeb850f3", [:mix], []},
-  "ex_doc": {:hex, :ex_doc, "0.12.0", "b774aabfede4af31c0301aece12371cbd25995a21bb3d71d66f5c2fe074c603f", [:mix], [{:earmark, "~> 0.2", [hex: :earmark, optional: false]}]}}
+%{
+  "earmark": {:hex, :earmark, "1.2.5", "4d21980d5d2862a2e13ec3c49ad9ad783ffc7ca5769cf6ff891a4553fbaae761", [:mix], [], "hexpm"},
+  "ex_doc": {:hex, :ex_doc, "0.18.3", "f4b0e4a2ec6f333dccf761838a4b253d75e11f714b85ae271c9ae361367897b7", [:mix], [{:earmark, "~> 1.1", [hex: :earmark, repo: "hexpm", optional: false]}], "hexpm"},
+  "ex_doc_simple_markdown": {:hex, :ex_doc_simple_markdown, "0.2.1", "c2da012c194935acabd5eb1b35d15f7dca059df9839ef73f46cacbbbc429b78f", [:mix], [{:ex_doc, "~> 0.18", [hex: :ex_doc, repo: "hexpm", optional: false]}, {:simple_markdown, "~> 0.3", [hex: :simple_markdown, repo: "hexpm", optional: false]}], "hexpm"},
+  "html_entities": {:hex, :html_entities, "0.4.0", "f2fee876858cf6aaa9db608820a3209e45a087c5177332799592142b50e89a6b", [:mix], [], "hexpm"},
+  "parsey": {:hex, :parsey, "0.0.2", "40356be7a83d5b56a670266fb69c9a2f95f638d1ad28803610f833cee71cac33", [:mix], [], "hexpm"},
+  "simple_markdown": {:hex, :simple_markdown, "0.5.3", "7d47279e6253ce2bc642aeb025789c71b5473173d61c10da1f03f6e40d6c3871", [:mix], [{:html_entities, "~> 0.3", [hex: :html_entities, repo: "hexpm", optional: false]}, {:parsey, "~> 0.0.2", [hex: :parsey, repo: "hexpm", optional: false]}], "hexpm"},
+}

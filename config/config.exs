@@ -2,29 +2,18 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
-# This configuration is loaded before any dependency and is restricted
-# to this project. If another project depends on this project, this
-# file won't be loaded nor affect the parent project. For this reason,
-# if you want to provide default values for your application for
-# 3rd-party users, it should be done in your "mix.exs" file.
+if Mix.env == :dev do
+    import_config "simple_markdown_rules.exs"
 
-# You can configure for your application as:
-#
-#     config :itsy, key: :value
-#
-# And access this configuration in your application as:
-#
-#     Application.get_env(:itsy, :key)
-#
-# Or configure a 3rd-party app:
-#
-#     config :logger, level: :info
-#
+    # config :simple_markdown_extension_highlight_js,
+    #     source: Enum.at(Path.wildcard(Path.join(Mix.Project.deps_path(), "ex_doc/formatters/html/dist/*.js")), 0, "")
 
-# It is also possible to import configuration files, relative to this
-# directory. For example, you can emulate configuration per environment
-# by uncommenting the line below and defining dev.exs, test.exs and such.
-# Configuration from the imported file will override the ones defined
-# here (which is why it is important to import them last).
-#
-#     import_config "#{Mix.env}.exs"
+    # config :ex_doc_simple_markdown, [
+    #     rules: fn rules ->
+    #         :ok = SimpleMarkdownExtensionHighlightJS.setup
+    #         SimpleMarkdownExtensionBlueprint.add_rule(rules)
+    #     end
+    # ]
+
+    config :ex_doc, :markdown_processor, ExDocSimpleMarkdown
+end
