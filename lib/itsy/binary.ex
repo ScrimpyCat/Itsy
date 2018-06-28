@@ -352,14 +352,21 @@ defmodule Itsy.Binary do
             end
             def unquote(decode)(encoding, [encoding|_], _), do: :error
             def unquote(decode)(encoding, opts, data) do
-                String.graphemes(opts[:pad_chr] || "")
-                |> Enum.reduce_while(encoding, fn c, acc ->
-                    size = byte_size(c)
-                    case acc do
-                        <<^c :: binary-size(size), acc :: binary>> -> { :cont, acc }
-                        _ -> { :halt, acc }
-                    end
-                end)
+                { :ok, data } = unquote(decode)("", opts, data)
+
+                case opts[:pad_chr] || "" do
+                    "" -> encoding
+                    pad ->
+                        String.graphemes(pad)
+                        |> Stream.cycle
+                        |> Enum.reduce_while(encoding, fn c, acc ->
+                            size = byte_size(c)
+                            case acc do
+                                <<^c :: binary-size(size), acc :: binary>> -> { :cont, acc }
+                                _ -> { :halt, acc }
+                            end
+                        end)
+                end
                 |> unquote(decode)([encoding|opts], data)
             end
 
