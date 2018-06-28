@@ -1,6 +1,6 @@
 defmodule Itsy do
     @moduledoc false
-    
+
     defmodule PowerOf2Error do
         defexception [:message, :value]
 
