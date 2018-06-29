@@ -7,6 +7,7 @@ defmodule Itsy.Binary do
     @type decoder :: decode_type | ((bitstring, [encodable]) -> decode_type)
     @type packing_options :: [position: position, into: bitstring, endian: endianness, reverse: boolean]
     @type unpacking_options :: [position: position, count: nil | non_neg_integer, endian: endianness, sign: signedness, reverse: boolean, decoder: decoder]
+    @type encoder_options :: [encode: atom, decode: atom, private: boolean]
     @type encode_options :: [multiple: pos_integer, pad_chr: String.t, pad_bit: integer]
     @type decode_options :: [bits: boolean, pad_chr: String.t]
 
@@ -358,6 +359,29 @@ defmodule Itsy.Binary do
     @spec encoder_padding(pos_integer) :: pos_integer
     def encoder_padding(count), do: padding(encoder_size(count), 1)
 
+    @doc """
+      Generate an encoding for the given power of 2 length character set.
+
+      The encoder will generate two functions `encode/3` and `decode/3`. These
+      functions will be used to encode data using your specified encoding scheme,
+      and decode strings with that encoding. The naming of these functions can
+      be changed by setting the `:encode` and `:decode` options.
+
+      By default the functions are made public (including documentation). They
+      can be made private by setting the `:private` option to `true`.
+
+        defmodule MyBase4 do
+            require Itsy.Binary
+
+            "ABCD"
+            |> String.graphemes
+            |> Enum.with_index
+            |> Itsy.Binary.encoder
+        end
+
+        MyBase4.encode("hello") |> MyBase4.decode
+    """
+    @spec encoder([{ char :: String.t, value :: non_neg_integer }], encoder_options) :: Macro.t
     defmacro encoder(charset, opts \\ []) do
         quote bind_quoted: [
             charset: charset,
