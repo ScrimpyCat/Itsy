@@ -371,6 +371,12 @@ defmodule Itsy.Binary do
       can be made private by setting the `:private` option to `true`. Optionally
       only the docs can be removed by setting `:docs` to `false`.
 
+      The generated documentation includes some doctests. To use these tests make
+      sure the module is specified as a doctest in your test code. If you do not
+      wish for these to be included in your tests (but still want the docs), then
+      simply exclude (`:except` option) the two functions from your
+      `ExUnit.DocTest.doctests/2`.
+
         defmodule MyBase4 do
             require Itsy.Binary
 
@@ -382,20 +388,38 @@ defmodule Itsy.Binary do
 
         MyBase4.encode("hello") |> MyBase4.decode
     """
-    @spec encoder([{ char :: String.t, value :: non_neg_integer }], encoder_options) :: Macro.t
+    @spec encoder([{ char :: String.t, value :: non_neg_integer },...], encoder_options) :: Macro.t
     defmacro encoder(charset, opts \\ []) do
         quote bind_quoted: [
             charset: charset,
             encode: opts[:encode] || :encode,
             decode: opts[:decode] || :decode
         ] do
-            encoding_size = Itsy.Binary.encoder_size(length(charset))
+            charset_count = length(charset)
+            encoding_size = Itsy.Binary.encoder_size(charset_count)
             get_size = if Enum.any?(charset, fn { c, _ } -> byte_size(c) > 1 end) do
                 { fun, _, _ } = quote(do: String.length)
                 fun
             else
                 :byte_size
             end
+
+            # for docs examples
+            { encoding_chr0, _ } = Enum.find(charset, "", fn
+                { _, 0 } -> true
+                _ -> false
+            end)
+            chars = Enum.map(charset, fn { c, _ } -> c end)
+            paddable_chr =
+                Stream.iterate(0, &(&1 + 1))
+                |> Stream.map(fn i ->
+                    size = Itsy.Bit.mask(i)
+                    size = size + 8 - (size - div(size, 8))
+                    <<i :: size(size)-big>>
+                end)
+                |> Stream.filter(&(String.printable?(&1) && &1))
+                |> Stream.filter(&(!Enum.any?(chars, fn c -> &1 == c end)))
+                |> Enum.at(0, "")
 
             @doc """
               Decodes encoded strings produced by the `#{encode}/3` function.
@@ -412,10 +436,17 @@ defmodule Itsy.Binary do
               chained together, and will be decoded into a contiguous set of
               data.
 
-                #{encode}("foo") |> #{decode}()
-                #{encode}("foo", multiple: 4, pad_chr: "=") |> #{decode}(pad_chr: "=")
-                #{encode}("foo") |> #{decode}(bits: true)
-                #{encode}("foo", pad_bit: 2) |> #{decode}()
+                iex> #{inspect __MODULE__}.#{decode}(#{inspect encoding_chr0})
+                { :ok, "" }
+
+                iex> #{inspect __MODULE__}.#{decode}(#{inspect encoding_chr0}, bits: true)
+                { :ok, #{inspect <<0 :: size(encoding_size)>>} }
+
+                iex> #{inspect __MODULE__}.#{decode}(#{inspect String.pad_trailing(encoding_chr0, Itsy.Binary.encoder_padding(charset_count), paddable_chr)}, bits: true, pad_chr: #{inspect paddable_chr})
+                { :ok, #{inspect <<0 :: size(encoding_size)>>} }
+
+                iex> #{inspect __MODULE__}.#{decode}(#{inspect encoding_chr0 <> encoding_chr0 <> encoding_chr0 <> encoding_chr0}, bits: true)
+                { :ok, #{inspect <<0 :: size(encoding_size), 0 :: size(encoding_size), 0 :: size(encoding_size), 0 :: size(encoding_size)>>} }
             """
             @spec unquote(decode)(bitstring, Itsy.Binary.decode_options, bitstring) :: { :ok, bitstring } | :error
             def unquote(decode)(encoding, opts \\ [], data \\ <<>>)
@@ -474,10 +505,14 @@ defmodule Itsy.Binary do
               sequence (note that only the part of the character sequence needed
               to reach the specified multiple will be used).
 
-                #{encode}("foo") |> #{decode}()
-                #{encode}("foo", multiple: 4, pad_chr: "=") |> #{decode}(pad_chr: "=")
-                #{encode}("foo") |> #{decode}(bits: true)
-                #{encode}("foo", pad_bit: 2) |> #{decode}()
+                iex> #{inspect __MODULE__}.#{encode}(#{inspect <<0 :: size(encoding_size)>>})
+                #{inspect encoding_chr0}
+
+                iex> #{inspect __MODULE__}.#{encode}(#{inspect <<0 :: size(encoding_size)>>}, multiple: #{inspect Itsy.Binary.encoder_padding(charset_count)}, pad_chr: #{inspect paddable_chr})
+                #{inspect String.pad_trailing(encoding_chr0, Itsy.Binary.encoder_padding(charset_count), paddable_chr)}
+
+                iex> #{inspect __MODULE__}.#{encode}(#{inspect <<0 :: size(encoding_size), 0 :: size(encoding_size), 0 :: size(encoding_size), 0 :: size(encoding_size)>>})
+                #{inspect String.pad_leading("", 4, encoding_chr0)}
             """
             @spec unquote(encode)(bitstring, Itsy.Binary.encode_options, binary) :: binary
             def unquote(encode)(data, opts \\ [], encoding \\ "")
