@@ -302,11 +302,60 @@ defmodule Itsy.Binary do
         unpack(packed, size, n - 1, endian, sign, decoder, [value|values], nil)
     end
 
+    @doc """
+      Get the number of bits one character of an encoding will represent.
+
+        iex> Itsy.Binary.encoder_size(1)
+        0
+
+        iex> Itsy.Binary.encoder_size(2)
+        1
+
+        iex> Itsy.Binary.encoder_size(4)
+        2
+
+        iex> Itsy.Binary.encoder_size(8)
+        3
+
+        iex> Itsy.Binary.encoder_size(16)
+        4
+
+        iex> Itsy.Binary.encoder_size(:erlang.bsl(1, 1000))
+        1000
+    """
+    @spec encoder_size(pos_integer) :: integer
     def encoder_size(count), do: Itsy.Bit.count(Itsy.Bit.mask_lower_power_of_2(count))
 
     defp padding(count, n) when rem(count * n, 8) == 0, do: n
     defp padding(count, n), do: padding(count, n + 1)
 
+    @doc """
+      Get the number of characters needed for an encoding, in order to pad to a
+      whole byte.
+
+      This value can be given to the `:multiples` option when encoding, in order
+      to obtain an encoding with the minimum amount of padding needed so it can
+      be concatenated with other encoded data.
+
+        iex> Itsy.Binary.encoder_padding(1)
+        1
+
+        iex> Itsy.Binary.encoder_padding(2)
+        8
+
+        iex> Itsy.Binary.encoder_padding(4)
+        4
+
+        iex> Itsy.Binary.encoder_padding(8)
+        8
+
+        iex> Itsy.Binary.encoder_padding(16)
+        2
+
+        iex> Itsy.Binary.encoder_padding(:erlang.bsl(1, 1000))
+        1
+    """
+    @spec encoder_padding(pos_integer) :: pos_integer
     def encoder_padding(count), do: padding(encoder_size(count), 1)
 
     defmacro encoder(charset, opts \\ []) do
