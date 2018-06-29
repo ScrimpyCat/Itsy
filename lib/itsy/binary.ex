@@ -437,7 +437,7 @@ defmodule Itsy.Binary do
               data.
 
                 iex> #{inspect __MODULE__}.#{decode}(#{inspect encoding_chr0})
-                { :ok, "" }
+                { :ok, #{inspect Itsy.Binary.pack([0], 8 * div(encoding_size, 8))} }
 
                 iex> #{inspect __MODULE__}.#{decode}(#{inspect encoding_chr0}, bits: true)
                 { :ok, #{inspect <<0 :: size(encoding_size)>>} }
@@ -506,18 +506,22 @@ defmodule Itsy.Binary do
               to reach the specified multiple will be used).
 
                 iex> #{inspect __MODULE__}.#{encode}(#{inspect <<0 :: size(encoding_size)>>})
-                #{inspect encoding_chr0}
+                #{inspect if(encoding_size > 0, do: encoding_chr0, else: "")}
 
                 iex> #{inspect __MODULE__}.#{encode}(#{inspect <<0 :: size(encoding_size)>>}, multiple: #{inspect Itsy.Binary.encoder_padding(charset_count)}, pad_chr: #{inspect paddable_chr})
-                #{inspect String.pad_trailing(encoding_chr0, Itsy.Binary.encoder_padding(charset_count), paddable_chr)}
+                #{inspect if(encoding_size > 0, do: String.pad_trailing(encoding_chr0, Itsy.Binary.encoder_padding(charset_count), paddable_chr), else: "")}
 
                 iex> #{inspect __MODULE__}.#{encode}(#{inspect <<0 :: size(encoding_size), 0 :: size(encoding_size), 0 :: size(encoding_size), 0 :: size(encoding_size)>>})
-                #{inspect String.pad_leading("", 4, encoding_chr0)}
+                #{inspect if(encoding_size > 0, do: String.pad_leading("", 4, encoding_chr0), else: "")}
             """
             @spec unquote(encode)(bitstring, Itsy.Binary.encode_options, binary) :: binary
             def unquote(encode)(data, opts \\ [], encoding \\ "")
-            for { chr, index } <- charset do
-                def unquote(encode)(<<unquote(index) :: size(unquote(encoding_size)), data :: bitstring>>, opts, encoding), do: unquote(encode)(data, opts, encoding <> unquote(<<chr :: binary>>))
+            if encoding_size > 0 do
+                for { chr, index } <- charset do
+                    def unquote(encode)(<<unquote(index) :: size(unquote(encoding_size)), data :: bitstring>>, opts, encoding), do: unquote(encode)(data, opts, encoding <> unquote(<<chr :: binary>>))
+                end
+            else
+                def unquote(encode)(data, opts, encoding) when bit_size(data) > 0, do: unquote(encode)(<<>>, opts, encoding)
             end
             def unquote(encode)(<<>>, opts, encoding) do
                 multiple = opts[:multiple] || 1
