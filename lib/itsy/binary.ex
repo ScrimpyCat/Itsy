@@ -7,7 +7,7 @@ defmodule Itsy.Binary do
     @type decoder :: decode_type | ((bitstring, [encodable]) -> decode_type)
     @type packing_options :: [position: position, into: bitstring, endian: endianness, reverse: boolean]
     @type unpacking_options :: [position: position, count: nil | non_neg_integer, endian: endianness, sign: signedness, reverse: boolean, decoder: decoder]
-    @type encoder_options :: [encode: atom, decode: atom, private: boolean]
+    @type encoder_options :: [encode: atom, decode: atom, private: boolean, docs: boolean]
     @type encode_options :: [multiple: pos_integer, pad_chr: String.t, pad_bit: integer]
     @type decode_options :: [bits: boolean, pad_chr: String.t]
 
@@ -368,7 +368,8 @@ defmodule Itsy.Binary do
       be changed by setting the `:encode` and `:decode` options.
 
       By default the functions are made public (including documentation). They
-      can be made private by setting the `:private` option to `true`.
+      can be made private by setting the `:private` option to `true`. Optionally
+      only the docs can be removed by setting `:docs` to `false`.
 
         defmodule MyBase4 do
             require Itsy.Binary
@@ -503,7 +504,7 @@ defmodule Itsy.Binary do
         end
         |> Macro.postwalk(fn
             { :def, context, body } -> { if(opts[:private], do: :defp, else: :def), context, body }
-            node = { :@, _, [{ :doc, _, _ }|_]} -> if(opts[:private], do: nil, else: node)
+            node = { :@, _, [{ :doc, _, _ }|_]} -> if(opts[:private] || !opts[:docs], do: nil, else: node)
             node -> node
         end)
     end
