@@ -504,7 +504,7 @@ defmodule Itsy.Binary do
         end
         |> Macro.postwalk(fn
             { :def, context, body } -> { if(opts[:private], do: :defp, else: :def), context, body }
-            node = { :@, _, [{ :doc, _, _ }|_]} -> if(opts[:private] || !opts[:docs], do: nil, else: node)
+            node = { :@, context, [{ :doc, doc_context, _ }|_]} -> if(opts[:private] || !opts[:docs], do: { :@, context, [{ :doc, doc_context, [false] }] }, else: node)
             node -> node
         end)
     end
