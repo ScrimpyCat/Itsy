@@ -110,8 +110,8 @@ defmodule Itsy.BinaryTest do
 
         test "correctness", %{ sequences: sequences } do
             Enum.each(sequences, fn data ->
-                assert Base.encode64(data, padding: false) == encode64(data)
-                assert Base.encode64(data, padding: true) == encode64(data, multiple: Itsy.Binary.encoder_padding(64), pad_chr: "=")
+                assert Base.url_encode64(data, padding: false) == encode64(data)
+                assert Base.url_encode64(data, padding: true) == encode64(data, multiple: Itsy.Binary.encoder_padding(64), pad_chr: "=")
             end)
         end
     end
