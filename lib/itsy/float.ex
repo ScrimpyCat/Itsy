@@ -1,5 +1,4 @@
 defmodule Itsy.Float do
-    @moduledoc false
     use Bitwise
     alias Itsy.Bit
 
@@ -22,7 +21,7 @@ defmodule Itsy.Float do
     end
 
     @spec new(integer, integer) :: float
-    def new(v, precision \\ 0), do: integer_to_float(v, precision)
+    def new(value, exponent \\ 0), do: integer_to_float(value, exponent * -1)
 
     @spec whole_to_float(integer) :: float
     defp whole_to_float(v) do
@@ -51,6 +50,12 @@ defmodule Itsy.Float do
         fraction_to_exponent(v, precision, if(v >= precision, do: index), index + 1)
     end
 
+    defp integer_to_float(v, precision) when precision < 0 do
+        precision = pow10(abs(precision))
+        { e, m } = integer_to_float(0, abs(v) * precision, precision)
+        <<f :: float>> = <<boolean_to_integer(v < 0) :: size(1), e + 1023 :: size(11), m :: size(52)>>
+        f
+    end
     defp integer_to_float(v, precision) do
         precision = pow10(precision)
         { e, m } = integer_to_float(abs(v), div(abs(v), precision), precision)
