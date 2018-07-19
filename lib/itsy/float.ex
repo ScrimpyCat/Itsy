@@ -1,5 +1,7 @@
 defmodule Itsy.Float do
     use Bitwise
+    require Itsy.Bit
+
     alias Itsy.Bit
 
     @spec sign(float) :: integer
@@ -32,9 +34,19 @@ defmodule Itsy.Float do
         { e, m <<< (52 - e) }
     end
 
+    defp rounding(_, _, _, :down), do: 0
+    defp rounding(_, _, _, :up), do: 1
+    defp rounding(v, precision, m, :even) do
+        case (rem(v, precision) * 2) do
+            v when v == precision -> m &&& 1
+            v when v > precision -> 1
+            _ -> 0
+        end
+    end
+
     defp fraction_to_mantissa(v, e, precision, m \\ 0, index \\ 0)
     defp fraction_to_mantissa(0, _, _, m, _), do: m
-    defp fraction_to_mantissa(_, _, _, m, 51), do: m
+    defp fraction_to_mantissa(v, _, precision, m, 52), do: m + rounding(v, precision, m, :even)
     defp fraction_to_mantissa(v, e, precision, m, index) do
         v = rem(v, precision) * 2
         m = m ||| ((boolean_to_integer(v >= precision) <<< (51 - index)) >>> e)
