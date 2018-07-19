@@ -13,25 +13,41 @@ defmodule Itsy.Float do
     @type precision :: encoding | 16 | 32 | 64 | 128 | 256
     @type options :: [rounding: rounding, precision: precision, raw: boolean]
 
-    @spec sign(float) :: integer
-    def sign(v) do
-        <<s :: size(1), _ :: bitstring>> = <<v :: float>>
+    @spec sign(float | infinity | bitstring) :: 0 | 1
+    def sign(v, opts \\ [])
+    def sign(v, _) when is_number(v), do: sign(<<v :: float>>)
+    def sign(:"+inf", _), do: 0
+    def sign(:"-inf", _), do: 1
+    def sign(v, opts) do
+        { sp, _, _ } = format_options(opts)[:precision]
+        <<s :: size(sp), _ :: bitstring>> = v
         s
     end
 
-    @spec exponent(float) :: integer
-    def exponent(v) do
-        <<_s :: size(1), e :: size(11), _ :: bitstring>> = <<v :: float>>
-        e - 1023
+    @spec exponent(float | infinity | bitstring, [precision: precision]) :: integer
+    def exponent(v, opts \\ [])
+    def exponent(v, _) when is_number(v), do: exponent(<<v :: float>>)
+    def exponent(v, opts) when v in [:"+inf", :"-inf"] do
+        { _, ep, _ } = format_options(opts)[:precision]
+        -Bit.set(ep - 1)
+    end
+    def exponent(v, opts) do
+        { sp, ep, _ } = format_options(opts)[:precision]
+        <<_s :: size(sp), e :: size(ep), _ :: bitstring>> = v
+        e - Bit.set(ep - 1)
     end
 
-    @spec mantissa(float) :: integer
-    def mantissa(v) do
-        <<_s :: size(1), _e :: size(11), m :: size(52)>> = <<v :: float>>
+    @spec mantissa(float | infinity | bitstring, [precision: precision]) :: non_neg_integer
+    def mantissa(v, opts \\ [])
+    def mantissa(v, _) when is_number(v), do: mantissa(<<v :: float>>)
+    def mantissa(v, _) when v in [:"+inf", :"-inf"], do: 0
+    def mantissa(v, opts) do
+        { sp, ep, mp } = format_options(opts)[:precision]
+        <<_s :: size(sp), _e :: size(ep), m :: size(mp)>> = v
         m
     end
 
-    @spec format_options(options) :: [rounding: rounding, precision: encoding]
+    @spec format_options(options) :: [raw: boolean, rounding: rounding, precision: encoding]
     defp format_options(opts) do
         opts = Keyword.merge([raw: false, precision: 64, rounding: :even], opts)
         case opts[:precision] do
