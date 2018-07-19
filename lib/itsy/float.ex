@@ -48,14 +48,13 @@ defmodule Itsy.Float do
     def new(value, exponent \\ 0, opts \\ []) do
         opts = format_options(opts)
         encoding = { sp, ep, mp } = opts[:precision]
-        { e, m } = integer_to_float(value, exponent * -1, opts[:rounding], encoding)
+        e_max = Bit.set(ep - 1)
+        { e, m } = if(value != 0, do: integer_to_float(value, exponent * -1, opts[:rounding], encoding), else: { -e_max, 0 })
 
         s = case sp do
             0 -> 0
             _ -> boolean_to_integer(value < 0)
         end
-
-        e_max = Bit.set(ep - 1)
 
         if e > e_max do
             if opts[:raw] do
@@ -81,7 +80,7 @@ defmodule Itsy.Float do
         end
     end
 
-    @spec whole_to_float(integer, mantissa_size) :: float
+    @spec whole_to_float(integer, mantissa_size) :: { integer, integer }
     defp whole_to_float(v, mp) do
         e = Bit.highest_set(v) |> Bit.mask_lower_power_of_2
         m = e &&& v
