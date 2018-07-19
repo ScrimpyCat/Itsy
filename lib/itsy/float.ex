@@ -4,6 +4,7 @@ defmodule Itsy.Float do
 
     alias Itsy.Bit
 
+    @type infinity :: :"-inf" | :"+inf"
     @type rounding :: :down | :up | :even
     @type sign_size :: non_neg_integer
     @type exponent_size :: non_neg_integer
@@ -43,7 +44,7 @@ defmodule Itsy.Float do
         end
     end
 
-    @spec new(integer, integer, options) :: float
+    @spec new(integer, integer, options) :: float | infinity
     def new(value, exponent \\ 0, opts \\ []) do
         opts = format_options(opts)
         integer_to_float(value, exponent * -1, opts[:rounding], opts[:precision])
@@ -89,7 +90,7 @@ defmodule Itsy.Float do
         fraction_to_exponent(v, precision, opts, if(v >= precision, do: index), index + 1)
     end
 
-    @spec integer_to_float(integer, integer, rounding, encoding) :: float
+    @spec integer_to_float(integer, integer, rounding, encoding) :: float | infinity
     defp integer_to_float(v, precision, rounding, encoding = { sp, ep, mp }) when precision < 0 do
         precision = pow10(abs(precision))
         { e, m } = integer_to_float(0, abs(v) * precision, precision, rounding, encoding)
@@ -99,19 +100,20 @@ defmodule Itsy.Float do
             _ -> boolean_to_integer(v < 0)
         end
 
-        e = case ep do
-            0 -> 0
-            _ -> min(e, Bit.set(ep - 1)) + 1023
-        end
+        if (e &&& Bit.unmask(Bit.set(ep - 1))) != 0 do
+            if(s == 0, do: :"+inf", else: :"-inf")
+        else
+            e = min(e, Bit.set(ep - 1)) + 1023
 
-        m = case mp do
-            0 -> 0
-            size when size <= 52 -> min(m, Bit.set(mp)) <<< (52 - size)
-            size -> min(m, Bit.set(mp)) >>> abs(52 - size)
-        end
+            m = case mp do
+                0 -> 0
+                size when size <= 52 -> min(m, Bit.set(mp)) <<< (52 - size)
+                size -> min(m, Bit.set(mp)) >>> abs(52 - size)
+            end
 
-        <<f :: float>> = <<s :: 1, e :: 11, m :: 52>>
-        f
+            <<f :: float>> = <<s :: 1, e :: 11, m :: 52>>
+            f
+        end
     end
     defp integer_to_float(v, precision, rounding, encoding = { sp, ep, mp }) do
         precision = pow10(precision)
@@ -122,19 +124,20 @@ defmodule Itsy.Float do
             _ -> boolean_to_integer(v < 0)
         end
 
-        e = case ep do
-            0 -> 0
-            _ -> min(e, Bit.set(ep - 1)) + 1023
-        end
+        if (e &&& Bit.unmask(Bit.set(ep - 1))) != 0 do
+            if(s == 0, do: :"+inf", else: :"-inf")
+        else
+            e = min(e, Bit.set(ep - 1)) + 1023
 
-        m = case mp do
-            0 -> 0
-            size when size <= 52 -> min(m, Bit.set(mp)) <<< (52 - size)
-            size -> min(m, Bit.set(mp)) >>> abs(52 - size)
-        end
+            m = case mp do
+                0 -> 0
+                size when size <= 52 -> min(m, Bit.set(mp)) <<< (52 - size)
+                size -> min(m, Bit.set(mp)) >>> abs(52 - size)
+            end
 
-        <<f :: float>> = <<s :: 1, e :: 11, m :: 52>>
-        f
+            <<f :: float>> = <<s :: 1, e :: 11, m :: 52>>
+            f
+        end
     end
 
     @spec integer_to_float(integer, integer, integer, rounding, encoding) :: { integer, integer }
