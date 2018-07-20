@@ -60,6 +60,58 @@ defmodule Itsy.Float do
         end
     end
 
+    @doc """
+      Create a float from an integer value and exponent.
+
+      The default precision is set to a binary64, but this can be changed by
+      setting the `:precision` option. This can either be passed in a standard
+      IEEE 754 encoding format, or the precision can be set for each part of
+      the float (sign, encoding, mantissa/significand).
+
+      By default the return value will be a float converting from the underlying
+      precision, or one of the infinity atoms. However if `:raw` is set to `true`
+      the return type will be the unconverted binary for the given precision.
+
+      The rounding defaults to the standard IEEE 754 rounding mode of round half
+      to even (`:even`). If this is not desired, an alternative rounding mode
+      can be specified using `:rounding`.
+
+        iex> Itsy.Float.new(0)
+        ...> 0.0
+
+        iex> Itsy.Float.new(1, 20)
+        ...> 1.0e20
+
+        iex> Itsy.Float.new(1, -20)
+        ...> 1.0e-20
+
+        iex> Itsy.Float.new(1, -1, rounding: :even)
+        0.1
+
+        iex> Itsy.Float.new(1, -1, rounding: :down)
+        0.09999999999999999
+
+        iex> Itsy.Float.new(3, -1, rounding: :even)
+        0.3
+
+        iex> Itsy.Float.new(3, -1, rounding: :up)
+        0.30000000000000004
+
+        iex> Itsy.Float.new(2225073858507201, -323)
+        2.225073858507201e-308
+
+        iex> Itsy.Float.new(17976931348623157, 292)
+        1.7976931348623157e308
+
+        iex> Itsy.Float.new(13, -1, precision: { 1, 2, 2 })
+        1.25
+
+        iex> Itsy.Float.new(14, -1, precision: { 1, 2, 2 })
+        1.5
+
+        iex> Itsy.Float.new(14, -1, precision: { 1, 2, 2 }, raw: true)
+        <<6::size(5)>>
+    """
     @spec new(integer, integer, options) :: float | infinity | bitstring
     def new(value, exponent \\ 0, opts \\ []) do
         opts = format_options(opts)
