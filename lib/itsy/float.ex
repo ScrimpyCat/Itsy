@@ -13,6 +13,30 @@ defmodule Itsy.Float do
     @type precision :: encoding | 16 | 32 | 64 | 128 | 256
     @type options :: [rounding: rounding, precision: precision, raw: boolean]
 
+    @doc """
+      Get the sign of a float.
+
+      Precision is used if the value is a bitstring. By default the precision is
+      set to a binary64, but this can be changed by setting the `:precision` option.
+      This can either be passed in a standard IEEE 754 encoding format, or the
+      precision can be set for each part of the float (sign, encoding,
+      mantissa/significand).
+
+        iex> Itsy.Float.sign(1)
+        ...> 0
+
+        iex> Itsy.Float.sign(-1)
+        ...> 1
+
+        iex> Itsy.Float.sign(:"+inf")
+        ...> 0
+
+        iex> Itsy.Float.sign(:"-inf")
+        1
+
+        iex> Itsy.Float.sign(<<6::size(5)>>, precision: { 1, 2, 2 })
+        0
+    """
     @spec sign(float | infinity, []) :: 0 | 1
     @spec sign(bitstring, [precision: precision]) :: 0 | 1
     def sign(v, opts \\ [])
