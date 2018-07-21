@@ -13,7 +13,8 @@ defmodule Itsy.Float do
     @type precision :: encoding | 16 | 32 | 64 | 128 | 256
     @type options :: [rounding: rounding, precision: precision, raw: boolean]
 
-    @spec sign(float | infinity | bitstring) :: 0 | 1
+    @spec sign(float | infinity, []) :: 0 | 1
+    @spec sign(bitstring, [precision: precision]) :: 0 | 1
     def sign(v, opts \\ [])
     def sign(v, _) when is_number(v), do: sign(<<v :: float>>)
     def sign(:"+inf", _), do: 0
@@ -24,7 +25,8 @@ defmodule Itsy.Float do
         s
     end
 
-    @spec exponent(float | infinity | bitstring, [precision: precision]) :: integer
+    @spec exponent(float | infinity, []) :: integer
+    @spec exponent(bitstring, [precision: precision]) :: integer
     def exponent(v, opts \\ [])
     def exponent(v, _) when is_number(v), do: exponent(<<v :: float>>)
     def exponent(v, opts) when v in [:"+inf", :"-inf"] do
@@ -37,7 +39,8 @@ defmodule Itsy.Float do
         e - Bit.set(ep - 1)
     end
 
-    @spec mantissa(float | infinity | bitstring, [precision: precision]) :: non_neg_integer
+    @spec mantissa(float | infinity, []) :: non_neg_integer
+    @spec mantissa(bitstring, [precision: precision]) :: non_neg_integer
     def mantissa(v, opts \\ [])
     def mantissa(v, _) when is_number(v), do: mantissa(<<v :: float>>)
     def mantissa(v, _) when v in [:"+inf", :"-inf"], do: 0
