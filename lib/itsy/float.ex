@@ -136,8 +136,20 @@ defmodule Itsy.Float do
         iex> Itsy.Float.new(14, -1, precision: { 1, 2, 2 })
         1.5
 
+        iex> Itsy.Float.new(-14, -1, precision: { 1, 2, 2 })
+        -1.5
+
         iex> Itsy.Float.new(14, -1, precision: { 1, 2, 2 }, raw: true)
         <<6::size(5)>>
+
+        iex> Itsy.Float.new(9999, 0, precision: { 1, 2, 2 })
+        :"+inf"
+
+        iex> Itsy.Float.new(-9999, 0, precision: { 1, 2, 2 })
+        :"-inf"
+
+        iex> Itsy.Float.new(1, -100000, precision: { 1, 2, 2 })
+        0.5
     """
     @spec new(integer, integer, options) :: float | infinity | bitstring
     def new(value, exponent \\ 0, opts \\ []) do
