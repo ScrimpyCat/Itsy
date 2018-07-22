@@ -23,13 +23,13 @@ defmodule Itsy.Float do
       mantissa/significand).
 
         iex> Itsy.Float.sign(1)
-        ...> 0
+        0
 
         iex> Itsy.Float.sign(-1)
-        ...> 1
+        1
 
         iex> Itsy.Float.sign(:"+inf")
-        ...> 0
+        0
 
         iex> Itsy.Float.sign(:"-inf")
         1
@@ -104,13 +104,13 @@ defmodule Itsy.Float do
       can be specified using `:rounding`.
 
         iex> Itsy.Float.new(0)
-        ...> 0.0
+        0.0
 
         iex> Itsy.Float.new(1, 20)
-        ...> 1.0e20
+        1.0e20
 
         iex> Itsy.Float.new(1, -20)
-        ...> 1.0e-20
+        1.0e-20
 
         iex> Itsy.Float.new(1, -1, rounding: :even)
         0.1
