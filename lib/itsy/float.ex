@@ -49,6 +49,30 @@ defmodule Itsy.Float do
         s
     end
 
+    @doc """
+      Get the exponent of a float.
+
+      Precision is used if the value is a bitstring or infinity atom. By default
+      the precision is set to a binary64, but this can be changed by setting the
+      `:precision` option. This can either be passed in a standard IEEE 754
+      encoding format, or the precision can be set for each part of the float
+      (sign, encoding, mantissa/significand).
+
+        iex> Itsy.Float.exponent(1)
+        0
+
+        iex> Itsy.Float.exponent(-1)
+        0
+
+        iex> Itsy.Float.exponent(:"+inf")
+        -1023
+
+        iex> Itsy.Float.exponent(:"-inf")
+        -1023
+
+        iex> Itsy.Float.exponent(<<6::size(5)>>, precision: { 1, 2, 2 })
+        0
+    """
     @spec exponent(float | infinity, []) :: integer
     @spec exponent(bitstring, [precision: precision]) :: integer
     def exponent(v, opts \\ [])
