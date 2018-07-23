@@ -217,7 +217,16 @@ defmodule Itsy.Float do
         m = e &&& v
         e = Bit.count(e)
 
-        { e, m <<< (mp - e) }
+        if e >= mp do
+            m = (m >>> (e - mp)) + ((m >>> (e - mp - 1)) &&& 1)
+            if Bit.count(Bit.mask(m)) > mp do
+                { e + 1, 0 }
+            else
+                { e, m }
+            end
+        else
+            { e, m <<< (mp - e) }
+        end
     end
 
     @spec rounding(integer, integer, integer, rounding) :: 0 | 1
