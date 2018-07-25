@@ -122,6 +122,8 @@ defmodule Itsy.Float do
         m
     end
 
+    def absolute_equality(a, b, diff), do: abs(a - b) <= diff
+
     @spec format_options(options) :: [raw: boolean, rounding: rounding, precision: encoding]
     defp format_options(opts) do
         opts = Keyword.merge([raw: false, precision: 64, rounding: :even], opts)
