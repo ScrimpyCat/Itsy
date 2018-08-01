@@ -122,6 +122,15 @@ defmodule Itsy.Float do
         m
     end
 
+    def relative_equality(a, b, relative_diff) do
+        diff = abs(a - b)
+
+        a = abs(a)
+        b = abs(b)
+
+        diff <= (if(a > b, do: a, else: b) * relative_diff)
+    end
+
     def absolute_equality(a, b, diff), do: abs(a - b) <= diff
 
     @spec format_options(options) :: [raw: boolean, rounding: rounding, precision: encoding]
