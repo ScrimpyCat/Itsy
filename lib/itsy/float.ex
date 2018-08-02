@@ -122,6 +122,12 @@ defmodule Itsy.Float do
         m
     end
 
+    def ulp(v) do
+        <<f :: 64>> = <<v :: float>>
+        <<v1 :: float>> = <<f + 1 :: 64>>
+        v1 - v
+    end
+
     def relative_equality(a, b, relative_diff) do
         diff = abs(a - b)
 
