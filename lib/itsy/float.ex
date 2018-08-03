@@ -128,6 +128,18 @@ defmodule Itsy.Float do
         v1 - v
     end
 
+    defp ulps(<<a :: 64>>, <<b :: 64>>) when a > b, do: a - b
+    defp ulps(<<a :: 64>>, <<b :: 64>>), do: b - a
+    defp ulps(a, b), do: ulps(<<a :: float>>, <<b :: float>>)
+
+    def ulps_equality(a, b, max) do
+        if sign(a) == sign(b) do
+            ulps(a, b) <= max
+        else
+            a == b
+        end
+    end
+
     def relative_equality(a, b, relative_diff) do
         diff = abs(a - b)
 
