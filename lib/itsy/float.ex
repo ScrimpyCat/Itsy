@@ -122,6 +122,7 @@ defmodule Itsy.Float do
         m
     end
 
+    @spec ulp(number) :: float
     def ulp(v) do
         <<f :: 64>> = <<v :: float>>
         <<v1 :: float>> = <<f + 1 :: 64>>
@@ -132,6 +133,7 @@ defmodule Itsy.Float do
     defp ulps(<<a :: 64>>, <<b :: 64>>), do: b - a
     defp ulps(a, b), do: ulps(<<a :: float>>, <<b :: float>>)
 
+    @spec ulps_equality(number, number, integer) :: boolean
     def ulps_equality(a, b, max) do
         if sign(a) == sign(b) do
             ulps(a, b) <= max
@@ -140,6 +142,7 @@ defmodule Itsy.Float do
         end
     end
 
+    @spec relative_equality(number, number, number) :: boolean
     def relative_equality(a, b, relative_diff) do
         diff = abs(a - b)
 
@@ -149,6 +152,7 @@ defmodule Itsy.Float do
         diff <= (if(a > b, do: a, else: b) * relative_diff)
     end
 
+    @spec absolute_equality(number, number, number) :: boolean
     def absolute_equality(a, b, diff), do: abs(a - b) <= diff
 
     @spec format_options(options) :: [raw: boolean, rounding: rounding, precision: encoding]
