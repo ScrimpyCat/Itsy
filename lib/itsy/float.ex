@@ -122,6 +122,18 @@ defmodule Itsy.Float do
         m
     end
 
+    @doc """
+      Get the unit of least precision of a number.
+
+        iex> Itsy.Float.ulp(3.14159265358979323846)
+        4.440892098500626e-16
+
+        iex> Itsy.Float.ulp(1.0e15)
+        0.125
+
+        iex> Itsy.Float.ulp(1.0e16)
+        2.0
+    """
     @spec ulp(number) :: float
     def ulp(v) do
         <<f :: 64>> = <<v :: float>>
