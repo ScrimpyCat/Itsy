@@ -145,6 +145,18 @@ defmodule Itsy.Float do
     defp ulps(<<a :: 64>>, <<b :: 64>>), do: b - a
     defp ulps(a, b), do: ulps(<<a :: float>>, <<b :: float>>)
 
+    @doc """
+      Check if two numbers are equal based on ulps difference.
+
+        iex> Itsy.Float.ulps_equality(1.0, 1.0, 0)
+        true
+
+        iex> Itsy.Float.ulps_equality(1.5, 1.0, 1125899906842624)
+        false
+
+        iex> Itsy.Float.ulps_equality(1.5, 1.0, 2251799813685248)
+        true
+    """
     @spec ulps_equality(number, number, integer) :: boolean
     def ulps_equality(a, b, max) do
         if sign(a) == sign(b) do
