@@ -156,6 +156,12 @@ defmodule Itsy.Float do
 
         iex> Itsy.Float.ulps_equality(1.5, 1.0, 2251799813685248)
         true
+
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.ulps_equality(1.0, 0)
+        false
+
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.ulps_equality(1.0, 1)
+        true
     """
     @spec ulps_equality(number, number, integer) :: boolean
     def ulps_equality(a, b, max) do
@@ -179,6 +185,12 @@ defmodule Itsy.Float do
         true
 
         iex> Itsy.Float.relative_equality(1.5, 1.0, 0.4)
+        true
+
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.relative_equality(1.0, 0)
+        false
+
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.relative_equality(1.0, Itsy.Float.ulp(1))
         true
     """
     @spec relative_equality(number, number, number) :: boolean
@@ -205,6 +217,12 @@ defmodule Itsy.Float do
 
         iex> Itsy.Float.absolute_equality(1.5, 1.0, 0.4)
         false
+
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.absolute_equality(1.0, 0)
+        false
+
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.absolute_equality(1.0, Itsy.Float.ulp(1))
+        true
     """
     @spec absolute_equality(number, number, number) :: boolean
     def absolute_equality(a, b, diff), do: abs(a - b) <= diff
