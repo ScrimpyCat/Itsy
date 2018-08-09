@@ -154,6 +154,21 @@ defmodule Itsy.Float do
         end
     end
 
+    @doc """
+      Check if two numbers are equal based on relative difference.
+
+        iex> Itsy.Float.relative_equality(1.0, 1.0, 0)
+        true
+
+        iex> Itsy.Float.relative_equality(1.5, 1.0, 0.25)
+        false
+
+        iex> Itsy.Float.relative_equality(1.5, 1.0, 0.5)
+        true
+
+        iex> Itsy.Float.relative_equality(1.5, 1.0, 0.4)
+        true
+    """
     @spec relative_equality(number, number, number) :: boolean
     def relative_equality(a, b, relative_diff) do
         diff = abs(a - b)
@@ -175,6 +190,9 @@ defmodule Itsy.Float do
 
         iex> Itsy.Float.absolute_equality(1.5, 1.0, 0.5)
         true
+
+        iex> Itsy.Float.absolute_equality(1.5, 1.0, 0.4)
+        false
     """
     @spec absolute_equality(number, number, number) :: boolean
     def absolute_equality(a, b, diff), do: abs(a - b) <= diff
