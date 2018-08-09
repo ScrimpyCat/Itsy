@@ -123,6 +123,15 @@ defmodule Itsy.Float do
     end
 
     @doc """
+      Get the epsilon.
+
+        iex> Itsy.Float.epsilon()
+        2.220446049250313e-16
+    """
+    @spec epsilon() :: float
+    def epsilon, do: ulp(1)
+
+    @doc """
       Get the unit of least precision of a number.
 
         iex> Itsy.Float.ulp(3.14159265358979323846)
@@ -190,7 +199,7 @@ defmodule Itsy.Float do
         iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.relative_equality(1.0, 0)
         false
 
-        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.relative_equality(1.0, Itsy.Float.ulp(1))
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.relative_equality(1.0, Itsy.Float.epsilon)
         true
     """
     @spec relative_equality(number, number, number) :: boolean
@@ -221,7 +230,7 @@ defmodule Itsy.Float do
         iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.absolute_equality(1.0, 0)
         false
 
-        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.absolute_equality(1.0, Itsy.Float.ulp(1))
+        iex> Stream.repeatedly(fn -> 0.1 end) |> Enum.take(10) |> Enum.sum |> Itsy.Float.absolute_equality(1.0, Itsy.Float.epsilon)
         true
     """
     @spec absolute_equality(number, number, number) :: boolean
