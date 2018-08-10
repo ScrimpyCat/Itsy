@@ -5,7 +5,7 @@ defmodule Itsy.Mixfile do
         [
             app: :itsy,
             description: "A library to simplify low level manipulation of numerical types",
-            version: "0.0.2",
+            version: "0.0.3",
             elixir: "~> 1.3",
             build_embedded: Mix.env == :prod,
             start_permanent: Mix.env == :prod,

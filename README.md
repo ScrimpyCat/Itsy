@@ -8,6 +8,6 @@ Installation
 ------------
 ```elixir
 def deps do
-    [{ :itsy, "~> 0.0.2" }]
+    [{ :itsy, "~> 0.0.3" }]
 end
 ```
