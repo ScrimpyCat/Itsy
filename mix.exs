@@ -33,9 +33,9 @@ defmodule Itsy.Mixfile do
     # Type "mix help deps" for more examples and options
     defp deps do
         [
-            { :ex_doc, "~> 0.18", only: :dev, runtime: false },
-            { :simple_markdown, "~> 0.5.3", only: :dev, runtime: false },
-            { :ex_doc_simple_markdown, "~> 0.2.1", only: :dev, runtime: false }
+            { :ex_doc, if(Version.compare(System.version, "1.7.0") == :lt, do: "~> 0.18", else: "~> 0.19"), only: :dev, runtime: false },
+            { :simple_markdown, "~> 0.5.4", only: :dev, runtime: false },
+            { :ex_doc_simple_markdown, "~> 0.3.2", only: :dev, runtime: false }
         ]
     end
 
